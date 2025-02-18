@@ -1,0 +1,72 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: EC2 instance creation stack with IAM role attached and Apache installation
+Resources:
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: MyAppSecurityGroup 
+      GroupDescription: Enable HTTP and SSH access to EC2 instance
+      VpcId: !ImportValue VPCId  # Import VPCId from VPC stack
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-0884d2865dbe9de4b  # Replace with your AMI ID. we are using for Ohio
+      SubnetId: !ImportValue PublicSubnet1Id  # Import Public Subnet 1 ID
+      KeyName: hello  # Your pre-existing KeyPair
+      SecurityGroupIds:
+        - !Ref EC2SecurityGroup
+      IamInstanceProfile: !ImportValue EC2InstanceProfileName  # Correct reference to IAM Role ARN
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          sudo apt update
+          sudo apt install apache2 -y
+          echo "I love Nepal" | sudo tee /var/www/html/index.html
+          sudo systemctl enable apache2
+          sudo systemctl restart apache2
+      Tags:
+        - Key: Name
+          Value: MyAppInstance  # Correct the tag key and value format
+
+  ElasticIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: MyApp-EIP
+          
+  EIPAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      InstanceId: !Ref EC2Instance
+      EIP: !Ref ElasticIP
+
+Outputs:
+  EC2InstanceId:
+    Value: !Ref EC2Instance  # Correct reference
+    Export:
+      Name: EC2InstanceId
+      
+  EC2PublicIP:
+    Value: !Ref ElasticIP  # Correct reference
+    Description: The public IP address of the EC2 instance
+    Export:
+      Name: EC2PublicIP
+      
+  EC2PublicDNS:
+    Value: !GetAtt EC2Instance.PublicDnsName  # Correct reference
+    Description: The public DNS of the EC2 instance
+    Export:
+      Name: EC2PublicDNS
