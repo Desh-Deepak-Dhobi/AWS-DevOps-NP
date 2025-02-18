@@ -1,0 +1,35 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Root Stack to create VPC, IAM role, EC2 instance, and attach resources
+
+Resources:
+  # VPC Stack Reference (First to be created)
+  VPCStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub 'https://myapp.s3.us-east-1.amazonaws.com/vpc-stack.yaml'
+
+  # IAM Stack Reference (Depends on VPC)
+  IAMStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: 
+      - VPCStack
+    Properties:
+      TemplateURL: !Sub 'https://myapp.s3.us-east-1.amazonaws.com/iam-stack.yaml'
+
+  # EC2 Stack Reference (Depends on VPC and IAM)
+  EC2Stack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - VPCStack
+      - IAMStack
+    Properties:
+      TemplateURL: !Sub 'https://myapp.s3.us-east-1.amazonaws.com/ec2-stack.yaml'
+
+Outputs:
+  EC2PublicIP:
+    Value: !GetAtt EC2Stack.Outputs.EC2PublicIP
+    Description: The public IP address of the EC2 instance.
+
+  EC2PublicDNS:
+    Value: !GetAtt EC2Stack.Outputs.EC2PublicDNS
+    Description: The public DNS of the EC2 instance.
