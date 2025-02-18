@@ -1,0 +1,36 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Creates an IAM Role for EC2 with S3 put object permissions
+
+Resources:
+  EC2InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: MyAppEC2Role 
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: S3PutObjectPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: s3:PutObject
+                Resource: arn:aws:s3:::your-bucket-name/*  # Specify your S3 bucket here
+
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: MyAppEC2Profile
+      Roles:
+        - !Ref EC2InstanceRole
+
+Outputs:
+  EC2InstanceProfileName:
+    Value: !Ref EC2InstanceProfile
+    Export:
+      Name: EC2InstanceProfileName  # Correct export for EC2Stack
