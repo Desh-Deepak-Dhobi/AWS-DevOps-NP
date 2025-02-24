@@ -1,0 +1,30 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Simple EC2 with cfn-signal Example
+
+Resources:
+  MyEC2Instance:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-0e1bed4f06a3b463d  # Replace with a valid AMI ID for your region
+      SubnetId: subnet-0c6aa84376cc2e698
+      KeyName: jenkins  # Replace with your key pair name
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          # Simulating a setup process
+          echo "Running setup tasks..." > /var/log/setup.log
+          sleep 10  # Simulate a task taking time
+          echo "Setup complete!" >> /var/log/setup.log
+          
+          # Signaling CloudFormation that the setup is complete
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource MyEC2Instance --region ${AWS::Region}
+
+      Tags:
+        - Key: Name
+          Value: MyAppInstance  # Correct the tag key and value format
+
+Outputs:
+  InstanceId:
+    Description: "Instance ID"
+    Value: !Ref MyEC2Instance
