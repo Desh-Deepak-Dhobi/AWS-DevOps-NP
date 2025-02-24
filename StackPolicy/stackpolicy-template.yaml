@@ -1,0 +1,18 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Resources:
+  MyEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-0e1bed4f06a3b463d
+      KeyName: deshtxxx
+      SubnetId: subnet-0c6aa84376cxxxxxx
+      Tags:
+       - Key: Name
+         Value: MyInstance
+
+  MyCriticalS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: my-protected-s3-bucket-566464
