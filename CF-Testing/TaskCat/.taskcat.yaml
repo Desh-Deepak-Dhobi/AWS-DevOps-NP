@@ -1,0 +1,13 @@
+.taskcat.yml 
+project:
+  name: ec2-deployment-test
+  regions:
+    - us-east-1
+    - us-west-2
+    - ap-south-1  # Mumbai
+
+tests:
+  ec2-instance-test:
+    template: ec2-sample-taskcat.yaml
+    parameters:
+      InstanceType: t2.micro
