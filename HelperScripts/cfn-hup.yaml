@@ -1,0 +1,85 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "EC2 Instance with cfn-hup and Apache HTTPD"
+
+Resources:
+  MyInstance:
+    Type: AWS::EC2::Instance
+    Metadata:
+      AWS::CloudFormation::Init:
+        configSets:
+          default: 
+            - install_cfn_hup
+            - install_httpd
+        install_cfn_hup:
+          packages:
+            yum:
+              aws-cfn-bootstrap: []
+          files:
+            /etc/cfn/cfn-hup.conf:
+              content: !Sub |
+                [main]
+                stack=${AWS::StackId}
+                region=${AWS::Region}
+                interval=1
+              mode: "000400"
+              owner: root
+              group: root
+            /etc/cfn/hooks.d/cfn-auto-reloader.conf:
+              content: !Sub |
+                [cfn-auto-reloader-hook]
+                triggers=post.update
+                path=Resources.MyInstance.Metadata.AWS::CloudFormation::Init
+                action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource MyInstance --region ${AWS::Region}
+                runas=root
+              mode: "000400"
+              owner: root
+              group: root
+          commands:
+            01enable_cfn_hup:
+              command: "systemctl enable cfn-hup"
+            02start_cfn_hup:
+              command: "systemctl start cfn-hup"
+        install_httpd:
+          packages:
+            yum:
+              httpd: []
+          files:
+            /var/www/html/index.html:
+              content: "<h1>Hello World</h1>"
+              mode: "000644"
+              owner: root
+              group: root
+          service s:
+            sysvinit:
+              httpd:
+                enabled: true
+                ensureRunning: true
+    Properties:
+      ImageId: ami-0dfcb1ef8550277af  # Amazon Linux 2 (Replace with your AMI)
+      InstanceType: t2.micro
+      KeyName: deshtest  # Replace with your actual key pair
+      SecurityGroups:
+        - Ref: WebServerSecurityGroup
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install -y aws-cfn-bootstrap
+          /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource MyInstance --region ${AWS::Region}
+          systemctl enable cfn-hup
+          systemctl start cfn-hup
+
+  WebServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable HTTP access
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
+Outputs:
+  WebsiteURL:
+    Description: "URL of the website"
+    Value: !Sub "http://${MyInstance.PublicIp}"
