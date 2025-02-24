@@ -1,0 +1,66 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template to test and fetch metadata using cfn-get-metadata.
+
+Resources:
+  MyInstance:
+    Type: AWS::EC2::Instance
+    Metadata:
+      AWS::CloudFormation::Init:
+        config:
+          packages:
+            yum:
+              httpd: []  # Install Apache HTTP server
+          files:
+            /tmp/instance-setup-log.txt:
+              content: |
+                Instance setup started.
+                This file will log the setup progress and metadata retrieval.
+                ---
+                Metadata retrieval will be logged below:
+              mode: '000644'
+              owner: root
+              group: root
+      CustomMetadata:
+        Purpose: "Testing EC2 Setup"
+        Owner: "desh.deepak"
+        Environment: "Production"
+        SetupStatus: "In Progress"
+        AdditionalInfo: "This metadata is used for debugging EC2 setup issues."
+
+    Properties:
+      ImageId: ami-0dfcb1ef8550277af  # Replace with a valid AMI ID for your region
+      InstanceType: t2.micro
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum install -y aws-cfn-bootstrap
+          /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource MyInstance --region ${AWS::Region}
+          
+          # Start Apache HTTP server
+          service httpd start
+          
+          # Fetch metadata and store it in the log file
+          /opt/aws/bin/cfn-get-metadata --region ${AWS::Region} --stack ${AWS::StackName} --resource MyInstance > /tmp/metadata-output.json
+          echo "Metadata has been fetched and stored." >> /tmp/instance-setup-log.txt
+          
+          # Signal completion
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource MyInstance --region ${AWS::Region}
+
+      Tags:
+        - Key: 'Name'
+          Value: 'MyEC2Instance'
+        - Key: 'Owner'
+          Value: 'desh.deepak'
+        - Key: 'Environment'
+          Value: 'Test'
+        - Key: 'purpose'
+          Value: Test
+            
+Outputs:
+  InstanceId:
+    Description: The ID of the EC2 instance
+    Value: !Ref MyInstance
+
+  InstanceMetadata:
+    Description: Metadata retrieved during stack creation
+    Value: !Sub 'Metadata is stored in /tmp/metadata-output.json on the instance.'
