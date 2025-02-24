@@ -1,0 +1,47 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: EC2 Instance with cfn-signal and WaitCondition (Fails on Setup Failure)
+
+Resources:
+  MyWaitHandle:
+    Type: AWS::CloudFormation::WaitConditionHandle
+
+  MyWaitCondition:
+    Type: AWS::CloudFormation::WaitCondition
+    Properties:
+      Handle: !Ref MyWaitHandle
+      Timeout: "120"  # 5 minutes timeout
+      Count: 1        # Expecting 1 success signal
+
+  MyEC2Instance:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-0e1bed4f06a3b463d  # Replace with a valid AMI ID for your region
+      SubnetId: subnet-0c6aa84376cc2e698
+      KeyName: jenkins  # Replace with your key pair name
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          echo "Running setup tasks..." > /var/log/setup.log
+          sleep 10  # Simulating setup time
+          echo "Setup complete!" >> /var/log/setup.log
+          
+          # Condition: Fail if the file does not exist
+          FILE_PATH="/tmp/success_file.txt"
+          
+          if [ -f $FILE_PATH ]; then
+              echo "File exists. Setup succeeded!" >> /var/log/setup.log
+              /opt/aws/bin/cfn-signal -e 0 --stack ${AWS::StackName} --resource MyWaitCondition --region ${AWS::Region} --url "${MyWaitHandle}"
+          else
+              echo "File does not exist. Setup failed!" >> /var/log/setup.log
+              /opt/aws/bin/cfn-signal -e 1 --stack ${AWS::StackName} --resource MyWaitCondition --region ${AWS::Region} --url "${MyWaitHandle}"
+          fi
+
+      Tags:
+        - Key: Name
+          Value: MyAppInstance
+
+Outputs:
+  InstanceId:
+    Description: "Instance ID"
+    Value: !Ref MyEC2Instance
