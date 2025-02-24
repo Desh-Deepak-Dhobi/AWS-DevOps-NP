@@ -1,0 +1,54 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Create EC2 instances with different AMI IDs, KeyPair, and Tags in multiple regions using StackSets"
+
+Mappings:
+  RegionMap:
+    us-east-2:
+      AMI: ami-0f6bd2f212e409001  # Replace with your region-specific AMI
+      Subnet: subnet-07901c384xxxxx
+      VPC: vpc-0162f0bc2xxxxx
+      KeyName: helxxx
+      TagName: "US-East-EC2"
+    ap-south-1:
+      AMI: ami-023a307f3d27ea427  # Replace with your region-specific AMI
+      Subnet: subnet-0a25xxxxx
+      VPC: vpc-00114e4529xxxxx
+      KeyName: mumbai
+      TagName: "AP-South-EC2"
+
+Resources:
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]   # Region-specific AMI
+      SubnetId: !FindInMap [RegionMap, !Ref "AWS::Region", Subnet]   # Region-specific Subnet
+      VpcId: !FindInMap [RegionMap, !Ref "AWS::Region", VPC]   # Region-specific VPC
+      KeyName: !FindInMap [RegionMap, !Ref "AWS::Region", KeyName]  # Region-specific KeyName
+      IamInstanceProfile: MyIAMRole  # Replace with your IAM role
+      Tags:
+        - Key: Name
+          Value: !FindInMap [RegionMap, !Ref "AWS::Region", TagName]  # Region-specific tag
+        - Key: Region
+          Value: !Ref "AWS::Region"  # To track the region for each instance
+        - Key: Environment
+          Value: "Production"   # Add any other tag you require
+
+Outputs:
+  InstanceID:
+    Description: "Instance ID of the newly created EC2 instance"
+    Value: !Ref EC2Instance
+    Export:
+      Name: EC2InstanceID
+
+  EC2PublicIP:
+    Description: "The public IP address of the EC2 instance"
+    Value: !GetAtt EC2Instance.PublicIp
+    Export:
+      Name: EC2PublicIP
+
+  EC2PublicDNS:
+    Description: "The public DNS of the EC2 instance"
+    Value: !GetAtt EC2Instance.PublicDnsName
+    Export:
+      Name: EC2PublicDNS
