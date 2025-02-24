@@ -1,0 +1,110 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "CloudFormation Custom Resource Example - EC2 with Lambda-based Custom Resource"
+
+Resources:
+
+  ### 🔹 IAM Role for Lambda Function 🔹 ###
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: CustomResourceLambdaRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: 
+                - lambda.amazonaws.com
+            Action: 
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaSSMWritePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssm:PutParameter
+                  - ssm:GetParameter
+                  - ssm:DeleteParameter
+                Resource: "arn:aws:ssm:*:*:parameter/CustomResource/EC2InstanceID"
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+
+  ### 🔹 Lambda Function as a Custom Resource 🔹 ###
+  CustomLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: CFN-CustomResource-Handler
+      Runtime: python3.9
+      Handler: index.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 10
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+
+          def lambda_handler(event, context):
+              ssm_client = boto3.client("ssm")
+              response_data = {}
+              
+              try:
+                  if event["RequestType"] == "Create" or event["RequestType"] == "Update":
+                      instance_id = event["ResourceProperties"]["EC2InstanceId"]
+                      ssm_client.put_parameter(
+                          Name="/CustomResource/EC2InstanceID",
+                          Value=instance_id,
+                          Type="String",
+                          Overwrite=True
+                      )
+                      response_data["Message"] = f"Stored EC2 Instance ID: {instance_id}"
+                  elif event["RequestType"] == "Delete":
+                      ssm_client.delete_parameter(Name="/CustomResource/EC2InstanceID")
+                      response_data["Message"] = "Deleted EC2 Instance ID from SSM"
+
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data)
+
+              except Exception as e:
+                  response_data["Error"] = str(e)
+                  cfnresponse.send(event, context, cfnresponse.FAILED, response_data)
+
+  ### 🔹 EC2 Instance Creation 🔹 ###
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-0e1bed4f06a3b463d  # Replace with a valid AMI ID for your region
+      SubnetId: subnet-0c6aa84376xxxxx
+      VpcId: vpc-087b025abxxxxx
+      KeyName: deshtest  # Replace with a valid KeyPair name
+      Tags:
+        - Key: Name
+          Value: "CustomResourceEC2"
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          echo "Hello from EC2" > /var/www/html/index.html
+          sudo yum install httpd -y
+          sudo systemctl start httpd
+          sudo systemctl enable httpd
+
+  ### 🔹 Custom Resource to Call Lambda 🔹 ###
+  CustomResource:
+    Type: Custom::LambdaTrigger
+    Properties:
+      ServiceToken: !GetAtt CustomLambdaFunction.Arn
+      EC2InstanceId: !Ref EC2Instance
+
+Outputs:
+  EC2InstanceID:
+    Description: "EC2 Instance ID"
+    Value: !Ref EC2Instance
+
+  SSMParameter:
+    Description: "SSM Parameter storing EC2 Instance ID"
+    Value: "/CustomResource/EC2InstanceID"
