@@ -1,0 +1,22 @@
+version: 0.2
+
+phases:
+  install:
+    commands:
+      - echo "Installing dependencies..."
+  build:
+    commands:
+      - echo "Checking if 'Nepal' is present in index.html..."
+      - |
+        if grep -q "Nepal" index.html; then
+          echo "Test Passed: 'Nepal' is present"
+        else
+          echo "Test Failed: 'Nepal' is missing"
+          exit 1
+        fi
+  post_build:
+    commands:
+      - echo "Packaging files..."
+artifacts:
+  files:
+    - "**/*"
