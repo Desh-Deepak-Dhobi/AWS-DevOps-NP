@@ -1,0 +1,57 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  mof-test-app
+
+  Sample SAM Template for mof-test-app
+
+Resources:
+  MyLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: mof-test-app-function
+      Handler: lambda_function.lambda_handler  # Change this to your Lambda function handler
+      Runtime: python3.12
+      MemorySize: 128  # Lambda memory in MB
+      Timeout: 3  # Timeout in seconds
+      EphemeralStorage:
+        Size: 512  # Lambda ephemeral storage in MB
+      Role: !GetAtt LambdaExecutionRole.Arn
+      CodeUri: ./main-code/   # Path to include only this file
+      FunctionUrlConfig:
+        AuthType: NONE  # No authentication
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: 
+                - lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: S3FullAccessPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:*
+                Resource: "*"
+        - PolicyName: DynamoDBFullAccessPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:*
+                Resource: "*"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+  
+Outputs:
+  LambdaFunctionName:
+    Value: !Ref MyLambdaFunction
