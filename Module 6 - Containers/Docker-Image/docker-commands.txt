@@ -1,0 +1,54 @@
+# To run and build the docker container
+docker build -t hello-nepal .
+docker run -p 80:80 hello-nepal
+
+# If there is port related issues
+sudo lsof -i :80  // Filters results to show only processes using port 80 
+sudo kill -9 <PID>
+
+# Policy for the IAM user to push and pull the images to ECR
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ecr:GetAuthorizationToken"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ecr:BatchCheckLayerAvailability",
+                "ecr:CompleteLayerUpload",
+                "ecr:GetDownloadUrlForLayer",
+                "ecr:InitiateLayerUpload",
+                "ecr:PutImage",
+                "ecr:UploadLayerPart"
+            ],
+            "Resource": "arn:aws:ecr:REGION:ACCOUNT_ID:repository/REPOSITORY_NAME"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ecr:DescribeRepositories",
+                "ecr:ListImages",
+                "ecr:BatchGetImage"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+
+# to run the pulled docker container from ECR
+docker run -p 80:80 [docker_image_name]
+
+#To run in a detached mode
+docker run -d -p 80:80 122433574929.dkr.ecr.us-east-1.amazonaws.com/mof-repo
+
+# to ssh into the container
+docker exec -it [ContainerID/ContainerName] /bin/sh
+
+# to see the specs of the docker container
+docker stats
