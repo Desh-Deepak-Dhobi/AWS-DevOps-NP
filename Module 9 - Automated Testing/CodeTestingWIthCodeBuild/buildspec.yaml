@@ -1,0 +1,30 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: latest
+    commands:
+      - echo "Installing dependencies..."
+      - pip install pytest pytest-cov coverage  # Install coverage along with pytest-cov
+
+  build:
+    commands:
+      - echo "Running tests with code coverage..."
+      - mkdir -p /codebuild/output/reports/test-report
+      - mkdir -p /codebuild/output/reports/code-coverage  # Create directory for code coverage reports
+      - pytest --cov=src --cov-report=xml:/codebuild/output/reports/code-coverage/coverage.xml --junitxml=/codebuild/output/reports/test-report/results.xml --tb=short --continue-on-collection-errors # Running tests with coverage
+      - echo "Tests and code coverage completed"
+
+reports:
+  TestReports:
+    files:
+      - "results.xml"
+    base-directory: "/codebuild/output/reports/test-report"
+    file-format: "JUNITXML"
+
+  CodeCoverageReports:
+    files:
+      - "coverage.xml"
+    base-directory: "/codebuild/output/reports/code-coverage"
+    file-format: "COBERTURAXML"
