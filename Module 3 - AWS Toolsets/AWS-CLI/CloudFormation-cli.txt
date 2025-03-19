@@ -14,7 +14,3 @@ echo "Creating CloudFormation stack: $STACK_NAME..."
 # Step 2: Wait for Stack Creation to Complete
 aws cloudformation wait stack-create-complete --stack-name $STACK_NAME
 echo "Stack $STACK_NAME has been successfully created!"
-
-# Step 3: Retrieve Stack Outputs (Optional)
-aws cloudformation describe-stacks --stack-name $STACK_NAME \
-  --query "Stacks[0].Outputs"
