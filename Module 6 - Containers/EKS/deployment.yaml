@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: desh-app
+  namespace: desh-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: desh-app
+  template:
+    metadata:
+      labels:
+        app: desh-app
+    spec:
+      containers:
+        - name: desh-container
+          image: 122433574929.dkr.ecr.us-east-1.amazonaws.com/mof-repo:latest
+          ports:
+            - containerPort: 80
